@@ -9,6 +9,8 @@ const cp = require('child_process')
 const zlib = require('zlib')
 const Busboy = require('busboy')
 
+const { spawn } = require('./utils/process')
+
 const DATA_DIRECTORY =
   process.env.DATA_DIRECTORY ||
   path.join(__dirname, 'data')
@@ -55,14 +57,24 @@ app.post('/-/install', async (req, res) => {
       const newPackagePath = path.join(installDirectory, 'package.json')
       await rename(lockfilePath, newLockfile)
       await rename(packagePath, newPackagePath)
-      lockfilePath = newLockfile
-      packagePath = newPackagePath
+      lockfilePath = null
+      packagePath = null
       let packageJson = path.join(installDirectory, 'package.json')
 
-      await runInstall(installDirectory)
+      await spawn(
+        require.resolve('yarn/bin/yarn'),
+        ['install', '--pure-lockfile'],
+        { cwd: installDirectory }
+      )
 
       tarFile = path.join(DATA_DIRECTORY, `${lockHash}.tar`)
-      await createTar(installDirectory, 'node_modules', tarFile)
+
+      await spawn(
+        'tar',
+        ['-rf', tarFile, 'node_modules'],
+        { cwd: installDirectory }
+      )
+
       await createGzip(tarFile, archiveFile)
     }
 
@@ -72,17 +84,15 @@ app.post('/-/install', async (req, res) => {
     console.error(`Error in install: ${installId}`)
     console.error(err)
 
-    if (lockfilePath) await unlink(lockfilePath)
-    if (packagePath) await unlink(packagePath)
-
     if (!res.headersSent) {
       res.status(500)
     }
 
     if (!res.finished) {
-      res.end(`Install failed: ${installId}`)
+      res.end(`Install failed: ${installId}\n${err.message}`)
     }
   } finally {
+    if (packagePath) await unlink(packagePath)
     if (lockfilePath) await unlink(lockfilePath)
     if (installDirectory) await rimraf(installDirectory)
     if (tarFile) await unlink(tarFile)
@@ -144,38 +154,6 @@ const writeRequestFiles = (request, files) => new Promise((res, rej) => {
     .on('error', rej)
 
   request.pipe(busboy)
-})
-
-const runInstall = (cwd) => new Promise((res, rej) => {
-  const process = cp.spawn(
-    require.resolve('yarn/bin/yarn'),
-    ['install', '--pure-lockfile'],
-    { cwd }
-  )
-
-  process.on('close', (code) => {
-    if (code > 0) {
-      rej(new Error('Failed to install'))
-    } else {
-      res()
-    }
-  })
-})
-
-const createTar = (cwd, src, dst) => new Promise((res, rej) => {
-  const process = cp.spawn(
-    'tar',
-    ['-rf', dst, src],
-    { cwd }
-  )
-
-  process.on('close', (code) => {
-    if (code > 0) {
-      rej(new Error('Failed to create tar archive'))
-    } else {
-      res()
-    }
-  })
 })
 
 const createGzip = (src, dst) => new Promise((res, rej) => {
