@@ -1,0 +1,15 @@
+{
+  "name": "simple-package-cache",
+  "version": "0.1.0",
+  "description": "Simple cache for yarn installs",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {
+    "busboy": "^0.3.0",
+    "express": "^4.16.4",
+    "rimraf": "^2.6.3",
+    "uuid": "^3.3.2",
+    "yarn": "^1.13.0"
+  }
+}
