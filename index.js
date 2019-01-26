@@ -7,11 +7,14 @@ const path = require('path')
 const _rimraf = require('rimraf')
 const cp = require('child_process')
 const zlib = require('zlib')
-const Busboy = require('Busboy')
+const Busboy = require('busboy')
 
 const DATA_DIRECTORY =
   process.env.DATA_DIRECTORY ||
   path.join(__dirname, 'data')
+const PORT =
+  process.env.PORT ||
+  8080
 
 const app = express()
 
@@ -193,4 +196,4 @@ const writeFileToResponse = (archiveFile, response) => new Promise((res, rej) =>
     .on('error', rej)
 })
 
-app.listen(8080)
+app.listen(PORT)
