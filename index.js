@@ -63,7 +63,7 @@ app.post('/-/install', async (req, res) => {
 
       await spawn(
         require.resolve('yarn/bin/yarn'),
-        ['install', '--pure-lockfile'],
+        ['install', '--pure-lockfile', '--ignore-scripts'],
         { cwd: installDirectory }
       )
 
